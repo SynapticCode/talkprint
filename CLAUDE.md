@@ -4,6 +4,28 @@ Private recorder and transcriber with speaker labels. Built by Azael ("Ozzie") M
 
 Why it exists: Azael uses the Genio app to record team conversations in rooms with heavy crosstalk. Genio is accurate and tells speakers apart; his Android voice recorder is not. Talkprint matches Genio's accuracy with OpenAI's diarizing model plus saved voice samples, so transcripts name the people he talks with and ignore the rest of the room.
 
+## Status: pick up here (as of 2026-10-20)
+The code is complete and builds. **It is not live yet.** Nothing has been deployed.
+
+Done:
+- [x] App code (this repo), `next build` passes, OpenAI request format and transcript formatting tested against a mock
+- [x] Supabase project `talkprint` created (ref `lcxcvowxzwymkeyillll`, us-east-1, org "Lava"), status ACTIVE_HEALTHY
+- [x] GitHub repo `SynapticCode/talkprint` (private)
+
+Not done, in this order:
+1. [ ] **Apply the schema.** Run `supabase/migrations/0001_init.sql` against project `lcxcvowxzwymkeyillll` (Supabase MCP `apply_migration`, or paste it into Supabase → SQL Editor → Run). The first attempt was cancelled at the approval prompt; nothing was applied. Verify afterwards with Supabase security advisors.
+2. [ ] **Seed the first admin:** `insert into public.allowed_users (email, role) values ('<Azael's Gmail>', 'admin');` Ask Azael which Gmail he signs in with. Don't guess.
+3. [ ] **Create the Vercel project** from GitHub repo `SynapticCode/talkprint` in team `team_jF8E9uacytoOEijzmUkRccFs`. Framework Next.js, root directory = repo root (leave blank). Set env vars for Production AND Preview: `NEXT_PUBLIC_SUPABASE_URL=https://lcxcvowxzwymkeyillll.supabase.co`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` (get with Supabase MCP `get_publishable_keys`, the `sb_publishable_...` one), `CRON_SECRET` (random 32+ chars, type Sensitive).
+4. [ ] **Add the domain** `talkprint.azaelmontejo.com` to that Vercel project.
+5. [ ] **Azael does these himself** (give him literal, verified click-by-click steps; he can't hand over secrets in chat):
+   - Google Cloud Console: create an OAuth client (Web application). Authorized JavaScript origin `https://talkprint.azaelmontejo.com`; Authorized redirect URI `https://lcxcvowxzwymkeyillll.supabase.co/auth/v1/callback`. Then paste the Client ID and Client Secret into Supabase → Authentication → Sign In / Providers → Google, and enable it. lava-intake never used Google, so nothing can be copied from it.
+   - Supabase → Authentication → URL Configuration: Site URL and Redirect URLs as listed under "Supabase Auth settings" below.
+   - Create an OpenAI API key (platform.openai.com) and paste it into Vercel as `OPENAI_API_KEY` (Production + Preview, type Sensitive), then redeploy.
+   - Dynadot DNS for azaelmontejo.com: add `CNAME`, host `talkprint`, value `cname.vercel-dns.com`. Add only this record; don't touch anything else.
+6. [ ] **Test end to end** on https://talkprint.azaelmontejo.com: Google sign-in, Access pending for a non-invited account, record 30 s on the Android phone, upload a short video from the laptop, add a voice sample, transcribe, check speaker names.
+
+Azael's preference: keep everything on GitHub and work through Claude Code on the web. A local clone on his laptop is optional.
+
 ## How Azael works (read this first)
 - Direct answers, no softening. Exact numbers, not ranges.
 - Setup instructions must be literal clicks ("Settings → API Keys → Create"), researched and verified first, with the complete final state in one block.
