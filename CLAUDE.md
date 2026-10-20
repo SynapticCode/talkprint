@@ -14,7 +14,7 @@ Why it exists: Azael uses the Genio app to record team conversations in rooms wi
 - Don't create docs or reports he didn't ask for. Answer in the conversation.
 - Spell the GPU host **Runpod** (one capital), per their docs.
 
-## Status: pick up here (as of 2026-10-20, evening)
+## Status: pick up here (as of 2026-10-20, late evening)
 The app shell is complete and builds. **It is not live yet.** The transcription engine must be replaced before anything is deployed.
 
 Done:
@@ -22,19 +22,14 @@ Done:
 - [x] Supabase project `talkprint` created (ref `lcxcvowxzwymkeyillll`, us-east-1, org "Lava"), status ACTIVE_HEALTHY
 - [x] GitHub repo `SynapticCode/talkprint` (private)
 - [x] Hugging Face account created (username `m00n11t3`)
-- [x] Runpod Claude Code plugin installed in the cloud session (`runpod@runpod` v1.8.0). It still has to be installed in the Claude Code you open this repo in; see step 0.
+- [x] Runpod Claude Code plugin (`runpod@runpod` v1.8.0) installed and signed in on the laptop
 
 **Wrong and must change:** `src/lib/transcribe.ts` and `src/app/api/transcribe/route.ts` call OpenAI `gpt-4o-transcribe-diarize`. That engine costs $0.36 per audio hour, so the planned $7.99/month plan with a 25-hour cap loses money ($9.00 in fees). The OpenAI model and its voice-sample feature are real (verified against OpenAI's docs), but it is the wrong engine for the price. Replace it; do not deploy it.
 
 Not done, in this order:
-0. [ ] **Runpod plugin in this Claude Code.** Run these two commands, then Azael runs `/reload-plugins` and signs in with `/mcp` → **runpod** → **Sign in with Runpod** (OAuth, no API key stored):
-   ```
-   claude plugin marketplace add runpod/runpod-plugins-official
-   claude plugin install runpod@runpod
-   ```
-   Verify with `claude plugin list | grep -A2 'runpod@runpod'` → `Status: ✔ enabled`. Source: https://docs.runpod.io/agent-setup.md. After sign-in, list his Pods with the Runpod MCP tools; an empty list is a pass.
-1. [ ] **Azael, before the worker is built:** Runpod account at runpod.io with credit added (ask him how much; the Runpod skills will say the minimum), and on Hugging Face accept the model terms at https://huggingface.co/pyannote/speaker-diarization-community-1 and create a **read** access token (Settings → Access Tokens). Secrets never go in chat; they go into Vercel/Runpod env vars by him.
-2. [ ] **Build the Runpod Serverless worker** in `/worker` (Dockerfile + handler): WhisperX (faster-whisper large-v3-turbo) + pyannote `speaker-diarization-community-1`, plus speaker matching: compute a pyannote embedding for each saved voice sample and for each diarized speaker, cosine-match, label matched speakers by name and the rest `A`, `B`, `C`. Input: a signed URL to the audio in Supabase Storage plus signed URLs for up to 4 voice samples. Output: `{ text, duration, segments: [{ speaker, start, end, text }] }`, the same shape `src/lib/types.ts` already expects. Use the Runpod `serverless-deploy` skill. Cheapest GPU class that fits (A40/A6000 48 GB is $1.22/hr flex, $0.00034/s; 16 GB class is $0.58/hr; try the cheaper one first).
+0. [x] **Runpod plugin in this Claude Code.** Installed and signed in on the laptop (2026-10-20); `list-pods` and `list-endpoints` returned empty lists.
+1. [x] **Azael:** Runpod account with $10 credit; pyannote `speaker-diarization-community-1` terms accepted; Hugging Face read token created (he sets it as `HF_TOKEN` on the Runpod endpoint).
+2. [ ] **Build the Runpod Serverless worker** (IN PROGRESS: code written in `worker/`, not built or tested yet. Built by Runpod's GitHub integration from this repo: Dockerfile path `worker/Dockerfile`, build context = repo root; GitHub is connected in Runpod settings. Next: Azael creates the endpoint in console.runpod.io → Serverless → New Endpoint → Import Git Repository, then Claude sets max 2 workers, 5 s idle, FlashBoot on, 30 min timeout, CUDA ≥ 12.8, pools AMPERE_16 + AMPERE_24 via the Runpod MCP and runs one test job. `MATCH_THRESHOLD` 0.5 is unmeasured.) in `/worker` (Dockerfile + handler): WhisperX (faster-whisper large-v3-turbo) + pyannote `speaker-diarization-community-1`, plus speaker matching: compute a pyannote embedding for each saved voice sample and for each diarized speaker, cosine-match, label matched speakers by name and the rest `A`, `B`, `C`. Input: a signed URL to the audio in Supabase Storage plus signed URLs for up to 4 voice samples. Output: `{ text, duration, segments: [{ speaker, start, end, text }] }`, the same shape `src/lib/types.ts` already expects. Use the Runpod `serverless-deploy` skill. Cheapest GPU class that fits (A40/A6000 48 GB is $1.22/hr flex, $0.00034/s; 16 GB class is $0.58/hr; try the cheaper one first).
 3. [ ] **Measure the real cost.** Run one ~25-minute test file through the endpoint and record seconds of GPU time × the per-second rate. Write the measured cost per audio hour here, replacing the estimate below. If it is above $0.17/hour, stop and tell Azael: AssemblyAI (Universal-2 $0.15 + $0.02 diarization = $0.17/hour, no voice samples) becomes the fallback.
 4. [ ] **Swap the app's engine.** Replace `src/lib/transcribe.ts` with a Runpod call (`POST https://api.runpod.ai/v2/<ENDPOINT_ID>/run`, then poll `/status/<job id>`, or `/runsync` if the job fits under Vercel's 300 s limit). Delete `OPENAI_API_KEY` / `OPENAI_TRANSCRIBE_MODEL` everywhere. Keep `/api/transcribe`'s contract with the UI unchanged.
 5. [ ] **Apply the schema.** Run `supabase/migrations/0001_init.sql` against project `lcxcvowxzwymkeyillll` (Supabase MCP `apply_migration`, or paste into Supabase → SQL Editor → Run). The first attempt was cancelled at the approval prompt; nothing was applied. Verify afterwards with Supabase security advisors.
