@@ -2,12 +2,12 @@
 
 Private recorder and transcriber. Record on your phone or laptop, or upload a file, and get a transcript that labels who said what. Save voice samples for the people you talk with most and the transcript uses their names.
 
-Live at https://talkprint.azaelmontejo.com (invite-only, Google sign-in).
+Will live at https://talkprint.azaelmontejo.com (invite-only, Google sign-in). **Not deployed yet.**
 
 ## Stack
 - Next.js 15 (App Router) on Vercel
 - Supabase: Google sign-in, Postgres, private file storage
-- OpenAI `gpt-4o-transcribe-diarize` for transcription with speaker labels
+- Transcription: self-hosted WhisperX + pyannote on Runpod Serverless (`/worker`, to be built). The current `src/lib/transcribe.ts` still calls OpenAI and is being replaced; see `CLAUDE.md`.
 
 ## Run locally
 ```bash
@@ -26,4 +26,4 @@ insert into public.allowed_users (email, role) values ('person@gmail.com', 'user
 ```
 
 ## Project context
-`CLAUDE.md` holds the decisions, architecture, gotchas and next steps. Claude Code reads it automatically.
+`CLAUDE.md` holds the decisions, the cost model, architecture, gotchas and the exact next steps. Claude Code reads it automatically.
