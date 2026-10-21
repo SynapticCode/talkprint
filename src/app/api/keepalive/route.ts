@@ -6,8 +6,8 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 // Vercel cron (vercel.json) calls this once a day so the free Supabase project
-// never hits the 7-day inactivity pause. Copied from lava-intake, minus the
-// service-role key: it calls a harmless RPC with the publishable key instead.
+// never hits the 7-day inactivity pause. No service-role key: it calls a
+// harmless RPC with the publishable key instead.
 export async function GET(request: NextRequest) {
   const secret = process.env.CRON_SECRET;
   if (secret && request.headers.get("authorization") !== `Bearer ${secret}`) {

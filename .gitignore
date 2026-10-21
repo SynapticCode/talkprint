@@ -14,3 +14,6 @@ npm-debug.log*
 .vercel
 .DS_Store
 Thumbs.db
+
+# Local test recordings (private; never commit)
+sample recording/

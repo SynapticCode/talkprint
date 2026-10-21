@@ -16,7 +16,6 @@ import {
 import type { Transcript } from "@/lib/types";
 
 const SPEAKER_COLORS = ["text-red-400", "text-sky-400", "text-amber-300", "text-emerald-400", "text-fuchsia-400", "text-orange-300"];
-const STALE_MS = 6 * 60 * 1000;
 
 function download(name: string, content: string, type = "text/plain") {
   const blob = new Blob([content], { type: `${type};charset=utf-8` });
@@ -35,18 +34,29 @@ export function TranscriptView({ transcript: t }: { transcript: Transcript }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Poll while the server job runs.
+  // While the Runpod job runs, ask the server to check it every 4 s; it saves the
+  // transcript when the job is done, then the refresh shows it.
   useEffect(() => {
     if (t.status !== "processing") return;
-    const timer = setInterval(() => router.refresh(), 4000);
-    return () => clearInterval(timer);
-  }, [t.status, router]);
+    let stopped = false;
+    const tick = async () => {
+      await fetch("/api/transcribe", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: t.id, check: true }),
+      }).catch(() => null);
+      if (!stopped) router.refresh();
+    };
+    const timer = setInterval(tick, 4000);
+    return () => {
+      stopped = true;
+      clearInterval(timer);
+    };
+  }, [t.status, t.id, router]);
 
   const merged = useMemo(() => mergeSegments(t.segments ?? []), [t.segments]);
   const speakers = useMemo(() => Array.from(new Set(merged.map((s) => s.speaker))), [merged]);
   const colorFor = (speaker: string) => SPEAKER_COLORS[speakers.indexOf(speaker) % SPEAKER_COLORS.length];
-
-  const isStale = t.status === "processing" && Date.now() - new Date(t.created_at).getTime() > STALE_MS;
 
   async function retry() {
     setBusy(true);
@@ -132,13 +142,8 @@ export function TranscriptView({ transcript: t }: { transcript: Transcript }) {
             <p className="text-sm font-semibold">Transcribing…</p>
           </div>
           <p className="mt-2 text-sm text-muted">
-            Usually done in under a minute per 10 minutes of audio. You can leave this page; it keeps going.
+            The first one after a quiet spell takes a few extra minutes to start. You can leave this page; it keeps going.
           </p>
-          {isStale && t.audio_path && (
-            <button onClick={retry} disabled={busy} className="btn mt-4">
-              {busy ? "Retrying…" : "Taking too long? Try again"}
-            </button>
-          )}
         </div>
       )}
 

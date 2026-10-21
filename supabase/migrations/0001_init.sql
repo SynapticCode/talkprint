@@ -1,8 +1,8 @@
 -- Talkprint initial schema
 -- Invite-only access (allowed_users), transcripts, voice samples, private storage,
 -- and a keepalive RPC so the free Supabase project never pauses.
--- Pattern copied from lava-intake (is_allowed / is_admin SECURITY DEFINER helpers),
--- simplified so the app never needs the service-role key.
+-- Access checks run through is_allowed / is_admin SECURITY DEFINER helpers,
+-- so the app never needs the service-role key.
 
 -- ---------------------------------------------------------------------------
 -- Allow-list
@@ -64,6 +64,7 @@ create table if not exists public.transcripts (
     source            text        not null default 'upload' check (source in ('recording', 'upload')),
     status            text        not null default 'processing' check (status in ('processing', 'done', 'error')),
     audio_path        text,       -- file in the audio bucket; cleared once transcribed (audio is deleted)
+    job_id            text,       -- Runpod job id while processing
     duration_seconds  numeric,
     text              text,
     segments          jsonb,
@@ -84,7 +85,7 @@ create policy transcripts_own on public.transcripts
     with check (user_id = auth.uid() and public.is_allowed());
 
 -- ---------------------------------------------------------------------------
--- Voice samples (OpenAI accepts up to 4 known speakers, 2-10 s each)
+-- Voice samples (the worker matches up to 4 saved voices, 5-20 s clips)
 -- ---------------------------------------------------------------------------
 create table if not exists public.voice_profiles (
     id                uuid        primary key default gen_random_uuid(),
@@ -155,12 +156,24 @@ revoke all on function public.keepalive() from public;
 grant execute on function public.keepalive() to anon, authenticated;
 
 -- ---------------------------------------------------------------------------
+-- Table privileges. The project has "Automatically expose new tables" off, so
+-- nothing is granted by default. Signed-in users only; RLS above decides rows.
+-- anon gets no table access at all (keepalive() is its only entry point).
+-- ---------------------------------------------------------------------------
+revoke all on public.allowed_users, public.transcripts, public.voice_profiles from anon;
+
+grant usage on schema public to authenticated;
+grant select, insert, update, delete
+    on public.allowed_users, public.transcripts, public.voice_profiles
+    to authenticated;
+
+-- ---------------------------------------------------------------------------
 -- Storage: private buckets, files live under <user id>/...
 -- audio: uploads waiting for transcription (deleted after); voice-samples: kept
 -- ---------------------------------------------------------------------------
 insert into storage.buckets (id, name, public, file_size_limit)
 values
-    ('audio', 'audio', false, 26214400),          -- 25 MB, OpenAI's per-file limit
+    ('audio', 'audio', false, 52428800),          -- 50 MB, the Free plan's max file size (~3.5 h of 32 kbps Opus)
     ('voice-samples', 'voice-samples', false, 2097152)
 on conflict (id) do nothing;
 

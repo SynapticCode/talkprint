@@ -8,7 +8,7 @@ const PUBLIC_PATHS = ["/login", "/auth/callback"];
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  // The daily cron ping must never be redirected to /login (lava-intake gotcha).
+  // The daily cron ping must never be redirected to /login, or Supabase pauses.
   if (pathname === "/api/keepalive") return NextResponse.next();
 
   let response = NextResponse.next({ request });

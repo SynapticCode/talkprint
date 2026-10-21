@@ -2,28 +2,20 @@
 
 import { createClient } from "@/lib/supabase/client";
 
-export const MAX_AUDIO_BYTES = 25 * 1024 * 1024;
-export const SUPPORTED_EXTENSIONS = ["mp3", "mp4", "mpeg", "mpga", "m4a", "wav", "webm"];
+// Supabase Free plan's max file size. 32 kbps Opus is ~14 MB/hour, so ~3.5 hours.
+export const MAX_AUDIO_BYTES = 50 * 1024 * 1024;
 
-function extensionFor(file: Blob, filename?: string): string {
-  const fromName = filename?.match(/\.([a-z0-9]+)$/i)?.[1]?.toLowerCase();
-  if (fromName) return fromName;
+function extensionFor(file: Blob): string {
   const type = file.type.toLowerCase();
-  if (type.includes("webm")) return "webm";
   if (type.includes("mp4") || type.includes("m4a") || type.includes("aac")) return "m4a";
-  if (type.includes("mpeg") || type.includes("mp3")) return "mp3";
-  if (type.includes("wav")) return "wav";
+  if (type.includes("ogg")) return "ogg";
   return "webm";
 }
 
-export function validateAudioFile(file: Blob, filename?: string): string | null {
+export function validateAudioFile(file: Blob): string | null {
   if (file.size === 0) return "That file is empty.";
   if (file.size > MAX_AUDIO_BYTES) {
-    return `That file is ${(file.size / 1024 / 1024).toFixed(1)} MB. The limit is 25 MB per file.`;
-  }
-  const ext = extensionFor(file, filename);
-  if (!SUPPORTED_EXTENSIONS.includes(ext)) {
-    return `.${ext} files aren't supported. Use ${SUPPORTED_EXTENSIONS.map((e) => `.${e}`).join(", ")}.`;
+    return `The audio is ${(file.size / 1024 / 1024).toFixed(1)} MB. The limit is 50 MB (about 3.5 hours).`;
   }
   return null;
 }
@@ -35,11 +27,10 @@ export function validateAudioFile(file: Blob, filename?: string): string | null 
  */
 export async function startTranscription(opts: {
   file: Blob;
-  filename?: string;
   title: string;
   source: "recording" | "upload";
 }): Promise<string> {
-  const problem = validateAudioFile(opts.file, opts.filename);
+  const problem = validateAudioFile(opts.file);
   if (problem) throw new Error(problem);
 
   const supabase = createClient();
@@ -49,7 +40,7 @@ export async function startTranscription(opts: {
   if (!user) throw new Error("You're signed out. Sign in again.");
 
   const id = crypto.randomUUID();
-  const path = `${user.id}/${id}.${extensionFor(opts.file, opts.filename)}`;
+  const path = `${user.id}/${id}.${extensionFor(opts.file)}`;
 
   const { error: upErr } = await supabase.storage.from("audio").upload(path, opts.file, {
     contentType: opts.file.type || "application/octet-stream",

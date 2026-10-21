@@ -14,6 +14,7 @@ export type Transcript = {
   source: "recording" | "upload";
   status: TranscriptStatus;
   audio_path: string | null;
+  job_id: string | null;
   duration_seconds: number | null;
   text: string | null;
   segments: Segment[] | null;

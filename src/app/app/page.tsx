@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { CaptureCard } from "@/components/CaptureCard";
 import { createClient } from "@/lib/supabase/server";
+import { syncTranscription } from "@/lib/transcription";
 import { formatDuration } from "@/lib/format";
 import type { Transcript } from "@/lib/types";
 
@@ -8,6 +9,10 @@ export const dynamic = "force-dynamic";
 
 export default async function AppHome() {
   const supabase = await createClient();
+
+  // Finish any transcripts whose Runpod job completed while no one was watching.
+  const { data: pending } = await supabase.from("transcripts").select("*").eq("status", "processing").returns<Transcript[]>();
+  await Promise.all((pending ?? []).map((t) => syncTranscription(supabase, t).catch(() => null)));
   const { data: transcripts } = await supabase
     .from("transcripts")
     .select("id, title, status, duration_seconds, created_at, source")

@@ -22,7 +22,7 @@ export function formatTimestamp(seconds: number): string {
   return h > 0 ? `${h}:${mm}:${ss}` : `${mm}:${ss}`;
 }
 
-/** OpenAI labels unknown voices "A", "B", ... and known voices by the name we sent. */
+/** The worker labels unknown voices "A", "B", ... and matched voices by their saved name. */
 export function speakerLabel(raw: string): string {
   const s = (raw ?? "").trim();
   if (!s) return "Speaker";

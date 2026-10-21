@@ -7,7 +7,7 @@ Will live at https://talkprint.azaelmontejo.com (invite-only, Google sign-in). *
 ## Stack
 - Next.js 15 (App Router) on Vercel
 - Supabase: Google sign-in, Postgres, private file storage
-- Transcription: self-hosted WhisperX + pyannote on Runpod Serverless (`/worker`, to be built). The current `src/lib/transcribe.ts` still calls OpenAI and is being replaced; see `CLAUDE.md`.
+- Transcription: self-hosted WhisperX + pyannote on Runpod Serverless (`/worker`), called from `src/lib/transcription.ts`. Uploads are converted to 32 kbps Opus audio in the browser first (`src/lib/extractAudio.ts`, Mediabunny), so any audio or video file works.
 
 ## Run locally
 ```bash

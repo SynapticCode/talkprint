@@ -5,9 +5,9 @@ import { useRouter } from "next/navigation";
 import { defaultTitle, startTranscription, MAX_AUDIO_BYTES } from "@/lib/startTranscription";
 import { formatTimestamp } from "@/lib/format";
 
-// 32 kbps Opus: ~1 h 45 min fits under OpenAI's 25 MB file limit.
+// 32 kbps Opus is ~14 MB/hour; 3 h 20 min stays under the 50 MB per-file limit.
 const BITRATE = 32_000;
-const MAX_SECONDS = 100 * 60;
+const MAX_SECONDS = 200 * 60;
 
 type Phase = "idle" | "recording" | "paused" | "review" | "sending";
 
@@ -154,7 +154,7 @@ export function Recorder() {
             {phase === "recording" ? "Recording" : "Paused"}
           </div>
           <p className="mt-2 font-mono text-5xl font-bold tabular-nums">{formatTimestamp(seconds)}</p>
-          <p className="mt-2 text-xs text-neutral-500">{mb} MB of 25 MB</p>
+          <p className="mt-2 text-xs text-neutral-500">{mb} MB of 50 MB</p>
           <div className="mt-6 flex gap-3">
             {phase === "recording" ? (
               <button onClick={pause} className="btn">Pause</button>

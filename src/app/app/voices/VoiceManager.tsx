@@ -5,9 +5,9 @@ import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import type { VoiceProfile } from "@/lib/types";
 
-// OpenAI accepts reference clips of 2-10 seconds. Aim for ~8, stop at 9.5.
-const MIN_SECONDS = 3;
-const AUTO_STOP_SECONDS = 9.5;
+// Longer clips give the worker's voice matching more to compare. Aim for ~15 s, stop at 20.
+const MIN_SECONDS = 5;
+const AUTO_STOP_SECONDS = 20;
 const MAX_VOICES = 4;
 
 export function VoiceManager({ initialVoices }: { initialVoices: VoiceProfile[] }) {
@@ -149,7 +149,7 @@ export function VoiceManager({ initialVoices }: { initialVoices: VoiceProfile[] 
       </ul>
 
       {full ? (
-        <p className="text-sm text-muted">You have 4 voices, the most OpenAI accepts. Delete one to add another.</p>
+        <p className="text-sm text-muted">You have 4 voices, the most a transcript can match. Delete one to add another.</p>
       ) : (
         <section className="card space-y-4">
           <h2 className="font-bold">Add a voice</h2>
@@ -165,7 +165,7 @@ export function VoiceManager({ initialVoices }: { initialVoices: VoiceProfile[] 
             />
           </div>
           <p className="text-sm text-muted">
-            Record about 8 seconds of that person talking normally, in a quiet spot. It stops on its own at 9 seconds.
+            Record about 15 seconds of that person talking normally, in a quiet spot. It stops on its own at 20 seconds.
           </p>
 
           {!recording && !clip && (
